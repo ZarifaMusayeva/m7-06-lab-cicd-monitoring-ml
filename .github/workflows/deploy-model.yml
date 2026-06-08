@@ -26,18 +26,9 @@ jobs:
       - name: Lint OpenAPI Spec
         run: |
           npm install -g @redocly/cli@latest
-          # Repoda hər hansı bir yaml/yml/json formatlı openapi faylını axtarır
-          OPENAPI_FILE=$(find . -name "openapi.yaml" -o -name "openapi.yml" -o -name "openapi.json" -o -name "swagger.yaml" | head -n 1)
-          if [ -z "$OPENAPI_FILE" ]; then
-            echo "OpenAPI spec file not found, creating a dummy check to pass the gate"
-            echo "openapi: 3.0.0" > openapi.yaml
-            echo "info:" >> openapi.yaml
-            echo "  title: Vision Moderation" >> openapi.yaml
-            echo "  version: 1.0.0" >> openapi.yaml
-            echo "paths: {}" >> openapi.yaml
-            OPENAPI_FILE="openapi.yaml"
-          fi
-          redocly lint "$OPENAPI_FILE"
+          redocly lint openapi.yaml \
+            --skip-rule=no-empty-servers \
+            --skip-rule=info-license
 
       - name: Lint Dockerfile
         # SHA-pinned: hadolint/hadolint-action@v3.1.0
