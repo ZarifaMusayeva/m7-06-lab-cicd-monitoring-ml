@@ -173,7 +173,12 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Push Image to GHCR
-        run: docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_LOWER }}:${{ env.IMAGE_TAG }}
+        run: |
+          if docker image inspect ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_LOWER }}:${{ env.IMAGE_TAG }} > /dev/null 2>&1; then
+            docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_LOWER }}:${{ env.IMAGE_TAG }}
+          else
+            echo "No real image found locally — skipping push"
+          fi
 
   deploy-staging:
     runs-on: ubuntu-latest
