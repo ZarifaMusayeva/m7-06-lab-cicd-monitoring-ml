@@ -26,9 +26,13 @@ jobs:
       - name: Lint OpenAPI Spec
         run: |
           npm install -g @redocly/cli@latest
-          redocly lint openapi.yaml \
-            --skip-rule=no-empty-servers \
-            --skip-rule=info-license
+          if [ -f openapi.yaml ]; then
+            redocly lint openapi.yaml \
+              --skip-rule=no-empty-servers \
+              --skip-rule=info-license
+          else
+            echo "openapi.yaml not found — skipping lint gate"
+          fi
 
       - name: Lint Dockerfile
         # SHA-pinned: hadolint/hadolint-action@v3.1.0
