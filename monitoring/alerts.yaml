@@ -1,0 +1,99 @@
+groups:
+  - name: vision-moderation-alerts
+    rules:
+
+      - alert: AvailabilityBurnFast
+        expr: |
+          (
+            sum(rate(http_requests_total{job="vision-moderation",code=~"5.."}[1h]))
+            /
+            sum(rate(http_requests_total{job="vision-moderation"}[1h]))
+          ) > (14.4 * (1 - 0.995))
+          and
+          (
+            sum(rate(http_requests_total{job="vision-moderation",code=~"5.."}[5m]))
+            /
+            sum(rate(http_requests_total{job="vision-moderation"}[5m]))
+          ) > (14.4 * (1 - 0.995))
+        for: 2m
+        labels:
+          severity: page
+        annotations:
+          summary: "CRITICAL: High availability burn rate (Fast burn)"
+          description: >
+            Both 1h and 5m error rate windows exceed 14.4x the SLO budget burn rate.
+            At this pace, 2% of the monthly error budget will be consumed in 1 hour.
+            Current 1h error ratio: {{ $value | humanizePercentage }}.
+          runbook: "https://runbooks.example.com/vision-moderation/availability-burn"
+
+      - alert: AvailabilityBurnSlow
+        expr: |
+          (
+            sum(rate(http_requests_total{job="vision-moderation",code=~"5.."}[24h]))
+            /
+            sum(rate(http_requests_total{job="vision-moderation"}[24h]))
+          ) > (3 * (1 - 0.995))
+          and
+          (
+            sum(rate(http_requests_total{job="vision-moderation",code=~"5.."}[6h]))
+            /
+            sum(rate(http_requests_total{job="vision-moderation"}[6h]))
+          ) > (3 * (1 - 0.995))
+        for: 15m
+        labels:
+          severity: ticket
+        annotations:
+          summary: "WARNING: Steady availability burn rate (Slow burn)"
+          description: >
+            Both 24h and 6h error rate windows exceed 3x the SLO budget burn rate.
+            At this pace, 10% of the monthly error budget will be consumed in 24 hours.
+            Current 24h error ratio: {{ $value | humanizePercentage }}.
+          runbook: "https://runbooks.example.com/vision-moderation/availability-burn"
+
+      - alert: LatencyP99High
+        expr: |
+          histogram_quantile(
+            0.99,
+            sum(rate(http_request_duration_seconds_bucket{job="vision-moderation"}[5m])) by (le)
+          ) > 1.0
+        for: 5m
+        labels:
+          severity: page
+        annotations:
+          summary: "CRITICAL: P99 latency exceeds 1 second"
+          description: >
+            P99 tail latency is {{ $value | humanizeDuration }}, breaching the 1-second SLO threshold.
+            Sustained for at least 5 minutes.
+          runbook: "https://runbooks.example.com/vision-moderation/latency-high"
+
+      - alert: DriftDetected
+        expr: |
+          input_feature_psi_score{job="vision-moderation"} > 0.2
+        for: 1h
+        labels:
+          severity: ticket
+        annotations:
+          summary: "WARNING: Data drift detected on feature {{ $labels.feature }}"
+          description: >
+            Feature '{{ $labels.feature }}' has a Population Stability Index (PSI) of {{ $value }},
+            indicating substantial input distribution shift (threshold: 0.2).
+            Sustained for at least 1 hour. Investigate upstream data pipeline.
+          runbook: "https://runbooks.example.com/vision-moderation/drift-detected"
+
+      - alert: ModelVersionMismatch
+        expr: |
+          count(
+            model_version_info{job="vision-moderation"}
+            unless on(replica)
+            model_version_info{job="vision-moderation", serving_version=expected_version}
+          ) > 0
+        for: 5m
+        labels:
+          severity: page
+        annotations:
+          summary: "CRITICAL: Model version mismatch across replicas"
+          description: >
+            At least {{ $value }} replica(s) are serving a model version that differs from
+            the version registered in the model registry. Possible partial rollout or
+            stuck rollback. Check replica labels for serving_version vs expected_version.
+          runbook: "https://runbooks.example.com/vision-moderation/version-mismatch"
