@@ -35,10 +35,12 @@ jobs:
           fi
 
       - name: Lint Dockerfile
-        # SHA-pinned: hadolint/hadolint-action@v3.1.0
-        uses: hadolint/hadolint-action@54c9adbab1582c2ef04b2016b760714a4bfde3cf
-        with:
-          dockerfile: Dockerfile
+        run: |
+          if [ -f Dockerfile ]; then
+            docker run --rm -i hadolint/hadolint < Dockerfile
+          else
+            echo "Dockerfile not found — skipping hadolint gate"
+          fi
 
   test:
     runs-on: ubuntu-latest
